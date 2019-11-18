@@ -1,0 +1,22 @@
+body {
+    margin:0px;
+    padding:0px;
+    background:#fff;
+    font-family: 'Roboto', sans-serif;
+    font-size: 30px;
+    color:rgb(56, 142, 255);
+}
+
+/* ------------------------------------------------- */
+
+.addBtn {
+    position: fixed;
+    height:100px;
+    width:100%;
+    background: #388eff;
+    text-align: center;
+    color:#fff;
+    font-size: 80px;
+    top:0px;
+    left:0px;
+}
