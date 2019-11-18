@@ -27,3 +27,5 @@ Also it would be interesting in the future tobe able to use multiple tools at th
 In order to display the tools button we need a method to retrieve the tools and show their buttons. But first, how do we "store" those tools, are they scripts, or json properties ? We first need to figure out how to model this information.
 
 For now, this tools are stored in a JSON inside the "teacher_utils.js" file
+
+One good feature to add to the boolMaster system is an updater telling the system that an update occured to constantly check for file data update
