@@ -1,4 +1,4 @@
-var CACHE_NAME = 'TeacherUtils-cache';
+var CACHE_NAME = 'teacher-utils-cache';
 var urlsToCache = [
   '.'
 ];
