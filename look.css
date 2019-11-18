@@ -72,3 +72,51 @@ body {
 .tool_btn.active .name {
     opacity: 1;
 }
+
+/* ------------------------------------------------- */
+
+.tool_panel {
+    position: absolute;
+    top:95px;
+    width:calc(100% - 40px);
+    height:calc(100% - 95px - 40px);
+    overflow-y: scroll;
+    padding:20px;
+}
+
+/* ------------------------------------------------- */
+
+.btn {
+    font-size: 20px;
+    min-width: 100px;
+    text-align: center;
+    color:#555;
+    padding:10px;
+    display: inline-block;
+    border-radius: 7px;
+    margin:10px;
+    transition: opacity 0.2s;
+}
+.btn.important {
+    background:#0097e6;
+    color:#fff;
+}
+.btn:hover {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+/* ------------------------------------------------- */
+
+.panel {
+    position: relative;
+    padding:10px;
+    margin:10px;
+    border:1px solid #ccc;
+    border-radius: 1000px;
+}
+.panel:after{
+    clear: both;
+    content: "";
+    display: block;
+}
