@@ -8,6 +8,9 @@ var global = {
             await global.save_studs({})
         return await boolMaster.read_key('studs')
     },
+    update_studs:function() {
+        boolMaster.trigger_checker('studs')
+    },
     save_studs:async function(studs) {
         await boolMaster.write_key('studs',studs)
     },
@@ -50,11 +53,13 @@ var tools = {
                 let studs = await global.get_studs()
                 studs[id] = stud
                 await global.save_studs(studs)
+                global.update_studs()
             },
             remove_stud:async function(id) {
                 let studs = await global.get_studs()
                 delete studs[id]
                 global.save_studs(studs)
+                global.update_studs()
             },
             prompt_stud_data:function() {
                 let names = prompt("prénom nom de l'étudiant")
