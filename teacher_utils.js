@@ -18,11 +18,11 @@ var global = {
             btn_JQ.addClass('important')
         return btn_JQ
     },
-    create_panel:function(inline=false) {
-        let panel_JQ = $('<div>').addClass('panel')
+    create_capsule:function(inline=false) {
+        let capsule_JQ = $('<div>').addClass('capsule')
         if(inline)
-            panel_JQ.addClass('inline')
-        return panel_JQ
+            capsule_JQ.addClass('inline')
+        return capsule_JQ
     },
     create_info:function(text) {
         let info_JQ = $('<div>').addClass('info')
@@ -75,15 +75,15 @@ var tools = {
                     await tthis.add_stud(id, fname, lname)
                 })
             },
-            display_stud:function(stud) {
+            display_stud:function(stud, stud_panel_JQ) {
                 let fullname = stud.fname+' '+stud.lname
                 let name_btn = global.create_btn(fullname)
-                let panel = global.create_panel()
+                let capsule = global.create_capsule()
                 .append(name_btn)
                 let del_btn = global.create_btn('supprimer')
                 .css('color',global.color.red).css('float','right')
-                panel.append(del_btn)
-                tool_panel_JQ.append(panel)
+                capsule.append(del_btn)
+                stud_panel_JQ.append(capsule)
                 let tthis = this
                 del_btn.click(function() {
                     tthis.remove_stud(stud.id)
@@ -95,11 +95,10 @@ var tools = {
                     tthis.add_stud(stud.id,fname,lname)
                 })
             },
-            display_studs:function(studs) {
-                console.log(studs)
+            display_studs:function(studs, stud_panel_JQ) {
                 for(let id in studs) {
                     let stud = studs[id]
-                    this.display_stud(stud)
+                    this.display_stud(stud, stud_panel_JQ)
                 }
             }
         },
@@ -107,14 +106,63 @@ var tools = {
         run:async function(inner) {
 
             inner.display_add_btn()
-            inner.display_studs(await global.get_studs())
-
+            let stud_panel_JQ = $('<div>')
+            tool_panel_JQ.append(stud_panel_JQ)
+            inner.check_id = boolMaster.register_checker('studs',function(studs) {
+                stud_panel_JQ.html('')
+                inner.display_studs(studs,stud_panel_JQ)
+            })
         },
         // ----------------------------------
-        stop:async function() {
+        stop:async function(inner) {
+            boolMaster.unregister_checker(inner.check_id)
         }
         // ----------------------------------
     },
+    'randomize': {
+        inner:{
+            get_rand_dist:async function() {
+                let studs = await global.get_studs()
+                let ret_stud = []
+                let full_len = Object.keys(studs).length
+                while(Object.keys(ret_stud).length < full_len) {
+                    let len = Object.keys(studs).length
+                    let index = parseInt(Math.random()*len)
+                    let id = Object.keys(studs)[index]
+                    let stud = studs[id]
+                    delete studs[id]
+                    ret_stud.push(stud)
+                }
+                return ret_stud
+            }
+        },
+        run:function(inner) {
+
+            let rand_btn = global.create_btn('randomize',true)
+            tool_panel_JQ.append(rand_btn)
+
+            let studs_panel = $('<div>')
+            tool_panel_JQ.append(studs_panel)
+
+            async function disp_rand() {
+                studs_panel.html('')
+                let studs = await inner.get_rand_dist()
+                for(let id in studs) {
+                    let stud = studs[id]
+                    let name = stud.fname+' '+stud.lname
+                    let capsule = global.create_capsule()
+                    .append(global.create_btn(name))
+                    studs_panel.append(capsule)
+                }
+                
+            }
+            rand_btn.click(disp_rand)
+            disp_rand()
+        },
+        stop() {
+
+        }
+    }
     // ----------------------------------------
 }
 
@@ -170,7 +218,7 @@ async function launch_tool(tool) {
 }
 
 async function stop_tool(tool) {
-    await tool.stop()
+    await tool.stop(tool.inner)
 }
 
 // ------------------------------------------------------------ CORE
