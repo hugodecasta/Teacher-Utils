@@ -8,7 +8,8 @@ var tool = {
     run:async function(inner) {
 
         let current_formation = await global.get_local('current_formation')
-        if(current_formation == null) {
+        if(! await global.element_exists('formations',current_formation)) {
+            await global.set_local('current_formation',null)
             tool_panel_JQ.html(global.create_info('Aucune formation sélectionnée'))
             return
         }
@@ -25,7 +26,8 @@ var tool = {
 
         let current_promo = await global.get_local('current_promotion')
 
-        promos_panel.html(global.create_table_display('promotions',current_formation,current_promo,async function(promo, open) {
+        promos_panel.append(global.create_info('formation - '+current_formation))
+        .append(global.create_table_display('promotions',current_formation,current_promo,async function(promo, open) {
             let current_stud = await global.get_local('current_stud')
             global.set_local('current_promotion',open?promo.id:null)
             if(!open) {
