@@ -3,17 +3,153 @@
 // -------------------------------------------------------------------------------- TOOLS
 
 var global = {
-    get_studs:async function() {
-        if(! await boolMaster.key_exists('studs'))
-            await global.save_studs({})
-        return await boolMaster.read_key('studs')
+
+    // --------------------------------------------------
+
+    get_local:async function(name, def=null) {
+        let value = localStorage.getItem(name)
+        if(value == null)
+            await global.set_local(name, def)
+        return localStorage.getItem(name)
     },
-    update_studs:function() {
-        boolMaster.trigger_checker('studs')
+    set_local:async function(name, value) {
+        localStorage.setItem(name, value)
+        if(value == null)
+            localStorage.removeItem(name)
     },
-    save_studs:async function(studs) {
-        await boolMaster.write_key('studs',studs)
+    id_to_gxid:function(id) {
+        let str = id
+        while(str.indexOf(' ') > -1)
+            str = str.replace(' ','_')
+        return str
     },
+
+    // --------------------------------------------------
+
+    get_table:async function(key,def={}) {
+        if(! await boolMaster.key_exists(key))
+            await global.set_table(key, def)
+        return await boolMaster.read_key(key)
+    },
+    set_table:async function(key, data) {
+        let ret = await boolMaster.write_key(key,data)
+        global.update_table(key)
+        return ret
+    },
+    element_exists:async function(key,id) {
+        let table = await global.get_table(key)
+        return table.hasOwnProperty(id)
+    },
+    get_by_prop:async function(key,prop,value) {
+        let table = await global.get_table(key)
+        let ret_obj = {}
+        for(let id in table) {
+            if(table[id][prop] == value)
+                ret_obj[id] = table[id]
+        }
+        return ret_obj
+    },
+
+    // -------------------------------------
+
+    current_registers:[],
+
+    update_table:function(table) {
+        boolMaster.trigger_checker(table)
+    },
+
+    register_table_change:async function(table, callback, source_id=null) {
+        let rid = await boolMaster.register_checker(table, async function() {
+            if(source_id == null)
+                callback(await global.get_table(table))
+            else
+                callback(await global.get_by_prop(table,'@sourceid',source_id))
+        })
+        global.current_registers.push(rid)
+    },
+
+    clear_current_registers:function() {
+        for(let rid of global.current_registers) {
+            boolMaster.unregister_checker(rid)
+        }
+    },
+
+    // --------------------------------------------------
+
+    set_element:async function(table, name, info={}) {
+        let elements = await global.get_table(table)
+        let element = {
+            id:name,
+            name:name
+        }
+        for(let prop in info)
+            element[prop] = info[prop]
+
+        elements[name] = element
+        await global.set_table(table,elements)
+    },
+
+    unset_element:async function(table, id) {
+        let elements = await global.get_table(table)
+        delete elements[id]
+        await global.set_table(table,elements)
+    },
+
+    create_table_methods:function(table,source=null,info_data=[]) {
+        let get_meth = async function(source_value=null) {
+            if(source_value==null || source==null)
+                return await global.get_table(table)
+            return await global.get_by_prop(table,source,source_value)
+        }
+        let exists_meth = async function(name) {
+            return await global.element_exists(table,name)
+        }
+        let prompt_add_meth = async function(source_id='',text='') {
+            let name = prompt('name',text)
+            if(name == null)
+                return null
+            let obj = {name:name,id:name}
+            obj['source_table'] = source
+            if(source != null) {
+                while(! await global.element_exists(source,source_id)) {
+                    source_name = prompt(source)
+                    if(source_name == null)
+                        return null
+                    source_id = global.get_by_prop(source,'name',source_name)
+                    source_id = Object.keys(source_id)[0]
+                }
+                obj['@sourceid'] = source_id
+                obj.id = source_id+'_'+name
+            }
+            if(info_data.length > 0) {
+                let dat = prompt(info_data.join(' '),'')
+                if(dat == null)
+                    return null
+                let dat_sp = dat.split(' ')
+                for(let i=0;i<info_data.length;++i) {
+                    obj[info_data[i]] = dat_sp[i]
+                }
+            }
+            return obj
+
+        }
+        let add_meth = async function(name, infos={}) {
+            await global.set_element(table,name,infos)
+        }
+        let remove_meth = async function(id) {
+            await global.unset_element(table, id)
+        }
+        global['get_'+table] = get_meth
+        global['add_'+table] = add_meth
+        global['remove_'+table] = remove_meth
+        global[table+'_exists'] = exists_meth
+        global['prompt_add_'+table] = prompt_add_meth
+    },
+
+    // --------------------------------------------------
+
+    // -------------------------------------------------- GX
+
     create_btn:function(name, important=false) {
         let btn_JQ = $('<div>').addClass('btn')
         .html(name)
@@ -35,7 +171,99 @@ var global = {
     color: {
         blue:'#0097e6',
         red:'#e84118'
+    },
+    create_separate_panels:function(number) {
+        let panels = []
+        for(let i=0;i<number;++i) {
+            let panel = $('<div>').css('float','left')
+            .css('width',(100/number)+'%')
+            panels.push(panel)
+        }
+        return panels
+    },
+
+    // -------------------------------------------------- table GX
+
+    create_instance_btn:function(table, instance, source_id=null, activate=false, callback=function(){}) {
+
+        function main_btn() {
+            let btn = global.create_btn(instance.name)
+            .attr('id','btn_'+global.id_to_gxid(instance.id))
+            btn.click(function() {
+                callback(instance, true)
+                let sub_btn = global.create_btn(instance.name)
+                .addClass('close_btn')
+                let alt_btn = global.create_btn('alter', true)
+                let del_btn = global.create_btn('delete', true)
+                .css('background',global.color.red)
+                let capsule = $('<div>').append(sub_btn)
+                .append(alt_btn).append(del_btn)
+                btn.replaceWith(capsule)
+                sub_btn.click(function() {
+                    callback(instance, false)
+                    capsule.replaceWith(main_btn())
+                })
+                del_btn.click(async function() {
+                    callback(instance, false)
+                    await global['remove_'+table](instance.id)
+                })
+                alt_btn.click(async function() {
+                    let obj = await global['prompt_add_'+table](source_id,instance.name)
+                    if(obj == null)
+                        return
+                    obj.id = instance.id
+                    await global['add_'+table](instance.id, obj)
+                })
+            })
+            return btn
+        }
+        let btn = main_btn()
+        if(activate)
+            btn.ready(function(){btn.click()})
+        return global.create_capsule().append(btn)
+    },
+    create_add_btn:function(table,source_id=null) {
+        let btn = global.create_btn('+ '+table,true)
+        btn.click(async function() {
+            let obj = await global['prompt_add_'+table](source_id)
+            if(obj == null)
+                return
+            await global['add_'+table](obj.id, obj)
+        })
+        return btn
+    },
+    create_table_display:function(table, source_id=null, current=null, callback=function(){}) {
+        let display = $('<div>')
+
+        let add_btn = global.create_add_btn(table, source_id)
+        let instance_panel = $('<div>')
+
+        display.append(add_btn).append(instance_panel)
+
+        global.register_table_change(table,function(instances) {
+            let all_capsules = []
+            instance_panel.html('')
+            for(let id in instances) {
+                let instance = instances[id]
+                let caps = global.create_instance_btn(table, instance, source_id, current == id, function(instance, open) {
+                    if(open)
+                        for(let subbtn of all_capsules) {
+                            let found = subbtn.find('.close_btn')
+                            if(found.length > 0) {
+                                found[0].click()
+                            }
+                        }
+                    callback(instance, open)
+                })
+                all_capsules.push(caps)
+                instance_panel.append(caps)
+            }
+        },source_id)
+
+        return display
     }
+
+    // --------------------------------------------------
 }
 
 var tools = {}
@@ -53,7 +281,7 @@ var tool_panel_JQ = $('.tool_panel')
 function create_tool_btn(tool) {
     let tool_btn_JQ = $('<div>').addClass('tool_btn')
     let hover_bar = $('<div>').addClass('hover')
-    let btn_name = $('<div>').addClass('name').html(tool.tool_name)
+    let btn_name = $('<div>').addClass('name').html(tool.name)
 
     tool_btn_JQ.append(hover_bar).append(btn_name)
 
@@ -70,6 +298,9 @@ function get_current_tool() {
     let current_tool_name = localStorage.getItem('current_tool_name')
     if(current_tool_name == null)
         return null
+    if(!tools.hasOwnProperty(current_tool_name)) {
+        return null
+    }
     return tools[current_tool_name]
 }
 
@@ -80,7 +311,7 @@ async function set_current_tool(tool) {
         current_tool.btn_JQ.removeClass('active')
         tool_panel_JQ.html('')
     }
-    localStorage.setItem('current_tool_name',tool.tool_name)
+    localStorage.setItem('current_tool_name',tool.name)
     tool.btn_JQ.addClass('active')
 }
 
@@ -95,31 +326,43 @@ async function stop_tool(tool) {
     await tool.stop(tool.inner)
 }
 
+// -------------------------------
+
+async function get_tools_file() {
+    let resp = await fetch('tools.php')
+    return resp.json()
+}
+
+async function load_tool(tool_file) {
+    return new Promise((ok)=>{
+        $.ajax({
+            url: 'tools/'+tool_file,
+            dataType: 'script',
+            success: function(data) {
+                eval(data)
+                ok(tool)
+            },
+            async: true
+        });
+    })
+}
+
 // ------------------------------------------------------------ CORE
 
 async function main() {
-    let tools_name = []
-    let tool_set = false
-    setInterval(async function() {
-        if(Object.keys(tools).length != tools_name) {
-            for(let tool_name in tools) {
-                if(tools_name.indexOf(tool_name) == -1) {
-                    tools_name.push(tool_name)
-                    let tool = tools[tool_name]
-                    tool.tool_name = tool_name
-                    tool.btn_JQ = create_tool_btn(tool)
-                    tool_bar_JQ.append(tool.btn_JQ)
-                }
-            }
-        }
-        if(tool_set)
-            return
-        let current_tool = get_current_tool()
-        if(current_tool != null) {
-            tool_set = true
-            await launch_tool(current_tool)
-        }
-    },500)
+
+    let tools_file = await get_tools_file()
+    for(let tool_file of tools_file) {
+        let tool = await load_tool(tool_file)
+        tools[tool.name] = tool
+        tool.btn_JQ = create_tool_btn(tool)
+        tool_bar_JQ.append(tool.btn_JQ)
+    }
+
+    let current_tool = get_current_tool()
+    if(current_tool != null) {
+        await launch_tool(current_tool)
+    }
 }
 
 // ---------------------------------------------------------------------- INIT
