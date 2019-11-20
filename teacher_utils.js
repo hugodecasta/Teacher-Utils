@@ -96,14 +96,7 @@ var global = {
     },
 
     create_table_methods:function(table,source=null,info_data=[]) {
-        let get_meth = async function(source_value=null) {
-            if(source_value==null || source==null)
-                return await global.get_table(table)
-            return await global.get_by_prop(table,source,source_value)
-        }
-        let exists_meth = async function(name) {
-            return await global.element_exists(table,name)
-        }
+        global.get_table(table)
         let prompt_add_meth = async function(source_id='',text='') {
             let name = prompt('name',text)
             if(name == null)
@@ -133,16 +126,6 @@ var global = {
             return obj
 
         }
-        let add_meth = async function(name, infos={}) {
-            await global.set_element(table,name,infos)
-        }
-        let remove_meth = async function(id) {
-            await global.unset_element(table, id)
-        }
-        global['get_'+table] = get_meth
-        global['add_'+table] = add_meth
-        global['remove_'+table] = remove_meth
-        global[table+'_exists'] = exists_meth
         global['prompt_add_'+table] = prompt_add_meth
     },
 
@@ -228,7 +211,7 @@ var global = {
             let obj = await global['prompt_add_'+table](source_id)
             if(obj == null)
                 return
-            await global['add_'+table](obj.id, obj)
+            await global.set_element(table,obj.id, obj)
         })
         return btn
     },
