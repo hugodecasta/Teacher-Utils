@@ -40,6 +40,11 @@ var global = {
         let table = await global.get_table(key)
         return table.hasOwnProperty(id)
     },
+    get_element:async function(table, id) {
+        let found = await global.get_by_prop(table, 'id', id)
+        let instance = found[id]
+        return instance
+    },
     get_by_prop:async function(key,prop,value) {
         let table = await global.get_table(key)
         let ret_obj = {}
@@ -49,6 +54,38 @@ var global = {
         }
         return ret_obj
     },
+
+    // -------------------------------------
+
+    register_source:async function(table, my_source) {
+        let source_table = await global.get_table('table_sourcing')
+        if(!source_table.hasOwnProperty(my_source)) {
+            source_table[my_source] = []
+        }
+        if(my_source == null)
+            return
+        if(source_table[my_source].indexOf(table) == -1)
+            source_table[my_source].push(table)
+        await global.set_table('table_sourcing',source_table)
+    },
+    find_sourcers:async function(source) {
+        let source_table = await global.get_table('table_sourcing')
+        if(!source_table.hasOwnProperty(source)) {
+            source_table[source] = []
+            await global.set_table('table_sourcing',source_table)
+        }
+        return source_table[source]
+    },
+    remove_from_source:async function(source_table, source_id) {
+        let sources = await global.find_sourcers(source_table)
+        for(let table of sources) {
+            let linked = await global.get_by_prop(table,'@sourceid',source_id)
+            let ids_to_remove = Object.keys(linked)
+            for(let id of ids_to_remove)
+                await global.unset_element(table,id)
+        }
+    },
+
 
     // -------------------------------------
 
@@ -93,10 +130,12 @@ var global = {
         let elements = await global.get_table(table)
         delete elements[id]
         await global.set_table(table,elements)
+        await global.remove_from_source(table, id)
     },
 
     create_table_methods:function(table,source=null,info_data=[]) {
         global.get_table(table)
+        global.register_source(table,source)
         let prompt_add_meth = async function(source_id='',text='') {
             let name = prompt('name',text)
             if(name == null)
@@ -188,7 +227,7 @@ var global = {
                 })
                 del_btn.click(async function() {
                     callback(instance, false)
-                    await global['remove_'+table](instance.id)
+                    await global.unset_element(table,instance.id)
                 })
                 alt_btn.click(async function() {
                     let obj = await global['prompt_add_'+table](source_id,instance.name)
