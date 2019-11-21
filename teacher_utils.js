@@ -54,6 +54,17 @@ var global = {
         }
         return ret_obj
     },
+    get_one_by_prop:async function(key,prop,value,def=null) {
+        let rets = await global.get_by_prop(key,prop,value)
+        let instance = def
+        console.log(rets)
+        if(Object.keys(rets).length > 0)
+            instance = rets[Object.keys(rets)[0]]
+        else if(def!=null) {
+            await global.set_element(key, def.id, def)
+        }
+        return instance
+    },
 
     // -------------------------------------
 
@@ -156,7 +167,7 @@ var global = {
             if(info_data.length > 0) {
                 for(let prop of info_data) {
                     let filled = instance==null?'':instance[prop]
-                    let value = prompt(name+' '+prop,filled)
+                    let value = prompt(name+': '+prop,filled)
                     if(value == null)
                         return null
                     obj[prop] = value
@@ -192,7 +203,8 @@ var global = {
     },
     color: {
         blue:'#0097e6',
-        red:'#e84118'
+        red:'#e84118',
+        green:'#0f0'
     },
     create_separate_panels:function(number) {
         let panels = []
@@ -275,7 +287,7 @@ var global = {
                                 found[0].click()
                             }
                         }
-                    callback(instance, open)
+                    callback(instance, open, caps)
                 })
                 all_capsules.push(caps)
                 instance_panel.append(caps)
