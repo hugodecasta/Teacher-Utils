@@ -204,7 +204,7 @@ var global = {
     color: {
         blue:'#0097e6',
         red:'#e84118',
-        green:'#0f0'
+        green:'#32ff7e'
     },
     create_separate_panels:function(number) {
         let panels = []
