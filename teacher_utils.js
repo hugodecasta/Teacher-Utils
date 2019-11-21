@@ -57,7 +57,6 @@ var global = {
     get_one_by_prop:async function(key,prop,value,def=null) {
         let rets = await global.get_by_prop(key,prop,value)
         let instance = def
-        console.log(rets)
         if(Object.keys(rets).length > 0)
             instance = rets[Object.keys(rets)[0]]
         else if(def!=null) {
@@ -218,7 +217,8 @@ var global = {
 
     // -------------------------------------------------- table GX
 
-    create_instance_btn:function(table, instance, source_id=null, activate=false, callback=function(){}) {
+    create_instance_btn:function(table, instance, source_id=null, activate=false, callback=function(){}, 
+        creation_meth=function(){}) {
 
         function main_btn() {
             let btn = global.create_btn(instance.name)
@@ -254,7 +254,9 @@ var global = {
         let btn = main_btn()
         if(activate)
             btn.ready(function(){btn.click()})
-        return global.create_capsule().append(btn)
+        let caps = global.create_capsule().append(btn)
+        creation_meth(instance, caps)
+        return caps
     },
     create_add_btn:function(table,source_id=null) {
         let btn = global.create_btn('+ '+table,true)
@@ -266,7 +268,7 @@ var global = {
         })
         return btn
     },
-    create_table_display:function(table, source_id=null, current=null, callback=function(){}) {
+    create_table_display:function(table, source_id=null, current=null, callback=function(){}, creation_meth=function(){}) {
         let display = $('<div>')
 
         let add_btn = global.create_add_btn(table, source_id)
@@ -288,7 +290,7 @@ var global = {
                             }
                         }
                     callback(instance, open, caps)
-                })
+                },creation_meth)
                 all_capsules.push(caps)
                 instance_panel.append(caps)
             }
