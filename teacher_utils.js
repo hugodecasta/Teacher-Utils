@@ -136,8 +136,8 @@ var global = {
     create_table_methods:function(table,source=null,info_data=[]) {
         global.get_table(table)
         global.register_source(table,source)
-        let prompt_add_meth = async function(source_id='',text='') {
-            let name = prompt('name',text)
+        let prompt_add_meth = async function(source_id='',instance=null) {
+            let name = prompt('name',instance==null?'':instance.name)
             if(name == null)
                 return null
             let obj = {name:name,id:name}
@@ -154,12 +154,12 @@ var global = {
                 obj.id = source_id+'_'+name
             }
             if(info_data.length > 0) {
-                let dat = prompt(info_data.join(' '),'')
-                if(dat == null)
-                    return null
-                let dat_sp = dat.split(' ')
-                for(let i=0;i<info_data.length;++i) {
-                    obj[info_data[i]] = dat_sp[i]
+                for(let prop of info_data) {
+                    let filled = instance==null?'':instance[prop]
+                    let value = prompt(name+' '+prop,filled)
+                    if(value == null)
+                        return null
+                    obj[prop] = value
                 }
             }
             return obj
@@ -230,11 +230,11 @@ var global = {
                     await global.unset_element(table,instance.id)
                 })
                 alt_btn.click(async function() {
-                    let obj = await global['prompt_add_'+table](source_id,instance.name)
+                    let obj = await global['prompt_add_'+table](source_id,instance)
                     if(obj == null)
                         return
                     obj.id = instance.id
-                    await global['add_'+table](instance.id, obj)
+                    await global.set_element(table, instance.id, obj)
                 })
             })
             return btn
